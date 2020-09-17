@@ -1585,11 +1585,19 @@ func MatchLabels(selector Labels, target map[string]string) (bool, string, error
 		}
 
 		if !utils.SliceContainsStr(selectorValues, Wildcard) {
-			result, err := utils.SliceMatchesRegex(targetVal, selectorValues)
-			if err != nil {
-				return false, "", trace.Wrap(err)
-			} else if !result {
-				return false, fmt.Sprintf("no value match: got '%v' want: '%v'", targetVal, selectorValues), nil
+			matched := false
+			for _, expr := range selectorValues {
+				m, err := parse.Match(expr)
+				if err != nil {
+					return false, "", trace.Wrap(err)
+				}
+				if m.Match(targetVal) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				return false, fmt.Sprintf("no value match: got %q want: %q", targetVal, selectorValues), nil
 			}
 		}
 	}
