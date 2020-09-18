@@ -453,7 +453,7 @@ func onLogin(cf *CLIConf) {
 			if err != nil {
 				utils.FatalError(err)
 			}
-			if err := tc.SaveProfile("", ""); err != nil {
+			if err := tc.SaveProfile("", true); err != nil {
 				utils.FatalError(err)
 			}
 			if err := kubeconfig.UpdateWithClient("", tc); err != nil {
@@ -514,7 +514,7 @@ func onLogin(cf *CLIConf) {
 	}
 
 	// Regular login without -i flag.
-	if err := tc.SaveProfile(key.ProxyHost, ""); err != nil {
+	if err := tc.SaveProfile("", true); err != nil {
 		utils.FatalError(err)
 	}
 
@@ -1423,7 +1423,7 @@ func reissueWithRequests(cf *CLIConf, tc *client.TeleportClient, reqIDs ...strin
 	if err := tc.ReissueUserCerts(cf.Context, params); err != nil {
 		return trace.Wrap(err)
 	}
-	if err := tc.SaveProfile("", ""); err != nil {
+	if err := tc.SaveProfile("", true); err != nil {
 		return trace.Wrap(err)
 	}
 	if err := kubeconfig.UpdateWithClient("", tc); err != nil {
