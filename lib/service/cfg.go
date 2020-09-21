@@ -32,6 +32,7 @@ import (
 	"github.com/gravitational/teleport/lib/bpf"
 	"github.com/gravitational/teleport/lib/defaults"
 	"github.com/gravitational/teleport/lib/events"
+	"github.com/gravitational/teleport/lib/kube/kubeconfig"
 	"github.com/gravitational/teleport/lib/limiter"
 	"github.com/gravitational/teleport/lib/pam"
 	"github.com/gravitational/teleport/lib/services"
@@ -368,6 +369,31 @@ type KubeProxyConfig struct {
 
 	// KubeconfigPath is a path to kubeconfig
 	KubeconfigPath string
+
+	// ClusterName is the name of a kubernetes cluster this proxy is running
+	// in. If set, this proxy will handle kubernetes requests for the cluster.
+	ClusterName string
+}
+
+// ClusterNames returns the complete list of kubernetes clusters from
+// ClusterName and kubeconfig.
+func (c KubeProxyConfig) ClusterNames() ([]string, error) {
+	var clusters []string
+	if c.ClusterName != "" {
+		clusters = append(clusters, c.ClusterName)
+	}
+	if c.KubeconfigPath != "" {
+		cfg, err := kubeconfig.Load(c.KubeconfigPath)
+		if err != nil {
+			return nil, trace.Wrap(err, "failed parsing kubeconfig file %q", c.KubeconfigPath)
+		}
+		for n := range cfg.Contexts {
+			if n != "" {
+				clusters = append(clusters, n)
+			}
+		}
+	}
+	return clusters, nil
 }
 
 // AuthConfig is a configuration of the auth server
