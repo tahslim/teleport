@@ -74,6 +74,17 @@ func (c *ClientProfile) Name() string {
 // DELETE IN: 6.0
 func migrateCurrentProfile(dir string) {
 	link := filepath.Join(dir, CurrentProfileSymlink)
+	linfo, err := os.Lstat(link)
+	if err != nil {
+		return
+	}
+	if finfo, err := os.Stat(filepath.Join(dir, CurrentProfileFilename)); err == nil {
+		if !linfo.ModTime().After(finfo.ModTime()) {
+			// current-profile is as new or newer than the legacy symlink,
+			// no migration necessary.
+			return
+		}
+	}
 	linked, err := os.Readlink(link)
 	if err != nil || linked == "" {
 		return
@@ -85,7 +96,21 @@ func migrateCurrentProfile(dir string) {
 	if err := SetCurrentProfileName(dir, name); err != nil {
 		return
 	}
-	os.Remove(link)
+
+	// TODO(fspmarshall): Re-enable removal once we've confirmed
+	// that nothing else relies on `link` (note: this should be
+	// done at least one minor version prior to removing migration).
+	//
+	//os.Remove(link)
+}
+
+// DELETE IN: 6.0
+func setLegacySymlink(dir string, name string) error {
+	link := filepath.Join(dir, CurrentProfileSymlink)
+	if err := os.Remove(link); err != nil && !os.IsNotExist(err) {
+		log.Warningf("Failed to remove legacy symlink: %v", err)
+	}
+	return trace.ConvertSystemError(os.Symlink(name+".yaml", link))
 }
 
 // SetCurrentProfileName attempts to set the current profile name.
@@ -93,6 +118,13 @@ func SetCurrentProfileName(dir string, name string) error {
 	if dir == "" {
 		return trace.BadParameter("cannot set current profile: missing dir")
 	}
+
+	// set legacy symlink first so that the current-profile file will have
+	// a more recent modification time.
+	if err := setLegacySymlink(dir, name); err != nil {
+		log.Warningf("Failed to set legacy symlink: %v", err)
+	}
+
 	path := filepath.Join(dir, CurrentProfileFilename)
 	if err := ioutil.WriteFile(path, []byte(strings.TrimSpace(name)+"\n"), 0660); err != nil {
 		return trace.Wrap(err)

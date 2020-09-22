@@ -106,17 +106,25 @@ func TestProfileSymlinkMigration(t *testing.T) {
 	// create old style symlink
 	assert.NoError(t, os.Symlink(file, link))
 
+	// ensure that link exists
+	_, err = os.Lstat(link)
+	assert.NoError(t, err)
+
 	// load current profile name; this should automatically
 	// trigger the migration and return the correct name.
 	cn, err := GetCurrentProfileName(dir)
 	assert.NoError(t, err)
 	assert.Equal(t, name, cn)
 
-	// verify that link no longer exists
-	_, err = os.Stat(link)
-	assert.True(t, os.IsNotExist(err))
-
 	// verify that current-profile file now exists
 	_, err = os.Stat(filepath.Join(dir, CurrentProfileFilename))
 	assert.NoError(t, err)
+
+	// forcibly remove the symlink
+	assert.NoError(t, os.Remove(link))
+
+	// loading current profile should still succeed.
+	cn, err = GetCurrentProfileName(dir)
+	assert.NoError(t, err)
+	assert.Equal(t, name, cn)
 }
