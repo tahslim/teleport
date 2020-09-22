@@ -164,10 +164,9 @@ func FullProfilePath(dir string) string {
 	return filepath.Join(home, ProfileDir)
 }
 
-// ProfileFromDir reads the user (yaml) profile from a given directory. The
-// default is to use the ~/<dir-path>/profile symlink unless another profile
-// is explicitly asked for. It works by looking for a "profile" symlink in
-// that directory pointing to the profile's YAML file first.
+// ProfileFromDir reads the user (yaml) profile from a given directory. If
+// name is empty, this function defaults to loading the currently active
+// profile (if any).
 func ProfileFromDir(dir string, name string) (*ClientProfile, error) {
 	if dir == "" {
 		return nil, trace.BadParameter("cannot load profile: missing dir")
